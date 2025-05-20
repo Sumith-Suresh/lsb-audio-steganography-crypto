@@ -1,143 +1,251 @@
-from tkinter import *
-from tkinter import filedialog
-from tkinter.ttk import *
-
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox
+import sv_ttk  # ModernTkinter for Theming
+import json
+import os
 from AudioStegnographyAlgo.LSBAudioStego import LSBAudioStego
 from AudioStegnographyAlgo.PhaseEncodingAudioStego import PhaseEncodingAudioStego
 
-root = Tk()
+class AudioSteganographyApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("LSB Audio Steganography")
+        self.root.geometry("447x465")
+        self.root.resizable(False, False)  # Fixed size window
+        sv_ttk.set_theme("dark")  # Set initial dark theme
 
+        # Load registered users from file
+        self.registered_users = self.load_users()
 
-# create window using from in Tkinter
-class Window(Frame):
+        # Theme toggle variable
+        self.theme_var = tk.BooleanVar(value=True)  # True for dark, False for light
 
-    # Define settings upon initialization. Here you can specify
-    def __init__(self, master=None):
-        # parameters that you want to send through the Frame class.
-        Frame.__init__(self, master)
-        # reference to the master widget, which is the tk window
-        self.master = master
+        # Create frames
+        self.create_login_frame()
+        self.create_signup_frame()
+        self.create_main_menu_frame()
+        self.create_encode_frame()
+        self.create_decode_frame()
 
+        # Show login frame initially
+        self.show_login()
 
-        self.init_window()
+    def load_users(self):
+        """Load registered users from a JSON file."""
+        if os.path.exists("users.json"):
+            with open("users.json", "r") as file:
+                return json.load(file)
+        return {}
 
-    # Creation of init_window
-    def init_window(self):
-        # changing the title of our master widget
-        self.master.title("Audio Steganography")
+    def save_users(self):
+        """Save registered users to a JSON file."""
+        with open("users.json", "w") as file:
+            json.dump(self.registered_users, file)
 
-        # allowing the widget to take the full space of the root window
-        self.pack(fill=BOTH, expand=1)
-        self.drawEnocoding()
-        self.drawDecoding()
+    def create_login_frame(self):
+        """Create the login frame."""
+        self.login_frame = ttk.Frame(self.root)
 
-    def drawEnocoding(self):
-        # encode Label
-        self.encodeVar = StringVar()
-        self.encodelabel = Label(root, textvariable=self.encodeVar)
-        self.encodelabel.place(x=10, y=10)
-        self.encodeVar.set("Encoding ")
-        # select algo
-        self.optionsVar = StringVar()
-        self.optionsVar.set("Least Significant Bit")  # default value
+        ttk.Label(self.login_frame, text="Login", font=("Arial", 16)).pack(pady=10)
 
-        self.encodingOptionsMenu = OptionMenu(root, self.optionsVar, "Least Significant Bit", "Phase Coding")
-        self.encodingOptionsMenu.place(x=10, y=50)
-        # creating a button instance
-        self.selectFileButton = Button(self, text="Select File  To Encode", command=self.selectFile)
-        self.selectFileButton.place(x=10, y=100)
+        ttk.Label(self.login_frame, text="Username:").pack(anchor="w", padx=20)
+        self.login_username = ttk.Entry(self.login_frame, width=30)
+        self.login_username.pack(fill="x", padx=20, pady=5)
 
-        # file location label
-        self.var = StringVar()
-        self.label = Label(root, textvariable=self.var, relief=RAISED)
-        self.label.place(x=10, y=130)
-        # placing the button on my window
+        ttk.Label(self.login_frame, text="Password:").pack(anchor="w", padx=20)
+        self.login_password = ttk.Entry(self.login_frame, width=30, show="*")
+        self.login_password.pack(fill="x", padx=20, pady=5)
 
-        # entry box
-        self.entryText = Entry(root)
-        self.entryText.place(x=10, y=180)
-        self.entryText.insert(0, "Enter String to encode ")
-        # encode Button
-        self.encodeButton = Button(self, text="Encode", command=self.encode)
-        self.encodeButton.place(x=10, y=220)
+        ttk.Button(self.login_frame, text="Login", command=self.login).pack(pady=10)
+        ttk.Button(self.login_frame, text="Signup", command=self.show_signup).pack(pady=10)
 
-        # encoded  location label
-        self.enocdedLocation = StringVar()
-        self.locationOfEncodeFile = Label(root, textvariable=self.enocdedLocation)
-        self.locationOfEncodeFile.place(x=10, y=280)
+        # Theme Toggle
+        toggle_frame = ttk.Frame(self.login_frame)
+        toggle_frame.place(relx=1.0, y=10, anchor="ne")
+        ttk.Checkbutton(toggle_frame, variable=self.theme_var, onvalue=True, offvalue=False,
+                         style="Switch.TCheckbutton", command=self.toggle_theme).pack(side="left")
 
-    def drawDecoding(self):
-        # decode Label
-        self.decodeVar = StringVar()
-        self.decodelabel = Label(root, textvariable=self.decodeVar)
-        self.decodelabel.place(x=500, y=10)
-        self.decodeVar.set("Decoding ")
+    def create_signup_frame(self):
+        """Create the signup frame."""
+        self.signup_frame = ttk.Frame(self.root)
 
-        # select algo
-        self.decodeOptionsVar = StringVar()
-        self.decodeOptionsVar.set("Least Significant Bit")  # default value
+        ttk.Label(self.signup_frame, text="Signup", font=("Arial", 16)).pack(pady=10)
 
-        self.decodingOptionsMenu = OptionMenu(root, self.decodeOptionsVar, "Least Significant Bit", "Phase Coding")
-        self.decodingOptionsMenu.place(x=500, y=50)
-        # creating a button instance
-        self.selectFileDecodeButton = Button(self, text="Select  File To Decode ", command=self.selectFileDecode)
-        self.selectFileDecodeButton.place(x=500, y=100)
-        #
-        # file location label
-        self.decodeFileVar = StringVar()
-        self.decodeFileLabel = Label(root, textvariable=self.decodeFileVar, relief=RAISED)
-        self.decodeFileLabel.place(x=500, y=140)
+        ttk.Label(self.signup_frame, text="Username:").pack(anchor="w", padx=20)
+        self.signup_username = ttk.Entry(self.signup_frame, width=30)
+        self.signup_username.pack(fill="x", padx=20, pady=5)
 
-        self.decodeButton = Button(self, text="Decode", command=self.decode)
-        self.decodeButton.place(x=500, y=200)
-        #
-        # decoded text label
-        self.decodedString = StringVar()
-        self.decodedStringlabel = Label(root, textvariable=self.decodedString, font=(None, 40))
-        self.decodedStringlabel.place(x=500, y=350)
+        ttk.Label(self.signup_frame, text="Password:").pack(anchor="w", padx=20)
+        self.signup_password = ttk.Entry(self.signup_frame, width=30, show="*")
+        self.signup_password.pack(fill="x", padx=20, pady=5)
 
-    def client_exit(self):
-        exit()
+        ttk.Label(self.signup_frame, text="Confirm Password:").pack(anchor="w", padx=20)
+        self.signup_confirm_password = ttk.Entry(self.signup_frame, width=30, show="*")
+        self.signup_confirm_password.pack(fill="x", padx=20, pady=5)
 
-    def selectFile(self):
-        # file selection
-        root.filename = filedialog.askopenfilename(initialdir="/", title="Select file",
-                                                   filetypes=(("jpeg files", "*.wav"), ("all files", "*.*")))
-        self.fileSelected = root.filename
-        self.var.set(root.filename)
+        ttk.Button(self.signup_frame, text="Signup", command=self.signup).pack(pady=10)
+        ttk.Button(self.signup_frame, text="Back", command=self.show_login).pack(side="right", padx=10, pady=20)
 
-    def selectFileDecode(self):
-        root.filename = filedialog.askopenfilename(initialdir="/", title="Select file",
-                                                   filetypes=(("jpeg files", "*.wav"), ("all files", "*.*")))
-        self.fileSelcetedForDecode = root.filename
-        self.decodeFileVar.set(root.filename)
+        # Theme Toggle
+        toggle_frame = ttk.Frame(self.signup_frame)
+        toggle_frame.place(relx=1.0, y=10, anchor="ne")
+        ttk.Checkbutton(toggle_frame, variable=self.theme_var, onvalue=True, offvalue=False,
+                         style="Switch.TCheckbutton", command=self.toggle_theme).pack(side="left")
 
-    def encode(self):
-        # select algo to encode
-        if self.optionsVar.get() == "Least Significant Bit":
-            algo = LSBAudioStego()
+    def create_main_menu_frame(self):
+        """Create the main menu frame."""
+        self.main_menu_frame = ttk.Frame(self.root)
+
+        ttk.Label(self.main_menu_frame, text="LSB Audio Steganography", font=("Arial", 16)).pack(pady=5)
+        ttk.Button(self.main_menu_frame, text="Encode Audio", command=self.show_encode).pack(pady=5)
+        ttk.Button(self.main_menu_frame, text="Decode Audio", command=self.show_decode).pack(pady=5)
+        ttk.Button(self.main_menu_frame, text="Exit", command=self.root.quit).pack(pady=10)
+
+        
+
+    def create_encode_frame(self):
+        """Create the encode frame."""
+        self.encode_frame = ttk.Frame(self.root)
+
+        ttk.Label(self.encode_frame, text="Audio Encoding", font=("Arial", 16)).pack(pady=10)
+        
+        self.selected_file = tk.StringVar()
+        ttk.Label(self.encode_frame, textvariable=self.selected_file).pack(pady=5)
+        ttk.Button(self.encode_frame, text="Select Audio File", command=self.select_file).pack(pady=5)
+        
+        ttk.Label(self.encode_frame, text="Enter Message to Encode:").pack()
+        self.message_entry = ttk.Entry(self.encode_frame, width=30)
+        self.message_entry.pack(pady=5)
+        
+        self.encoding_algorithm = tk.StringVar(value="Least Significant Bit")
+        ttk.Label(self.encode_frame, text="Select Encoding Algorithm:").pack()
+        ttk.Combobox(self.encode_frame, textvariable=self.encoding_algorithm, values=["Least Significant Bit", "Phase Coding"]).pack(pady=5)
+        
+        ttk.Button(self.encode_frame, text="Encode", command=self.encode_audio).pack(pady=10)
+        ttk.Button(self.encode_frame, text="Back", command=self.show_main_menu).pack(side="right", padx=10, pady=10)
+
+    def create_decode_frame(self):
+        """Create the decode frame."""
+        self.decode_frame = ttk.Frame(self.root)
+
+        ttk.Label(self.decode_frame, text="Audio Decoding", font=("Arial", 16)).pack(pady=10)
+        
+        self.selected_decode_file = tk.StringVar()
+        ttk.Label(self.decode_frame, textvariable=self.selected_decode_file).pack(pady=5)
+        ttk.Button(self.decode_frame, text="Select Encoded Audio File", command=self.select_decode_file).pack(pady=5)
+        
+        self.decoding_algorithm = tk.StringVar(value="Least Significant Bit")
+        ttk.Label(self.decode_frame, text="Select Decoding Algorithm:").pack()
+        ttk.Combobox(self.decode_frame, textvariable=self.decoding_algorithm, values=["Least Significant Bit", "Phase Coding"]).pack(pady=5)
+        
+        self.decoded_message = tk.StringVar()
+        ttk.Label(self.decode_frame, textvariable=self.decoded_message, font=("Arial", 14)).pack(pady=10)
+        
+        ttk.Button(self.decode_frame, text="Decode", command=self.decode_audio).pack(pady=10)
+        ttk.Button(self.decode_frame, text="Back", command=self.show_main_menu).pack(side="right", padx=10, pady=10)
+
+    def show_login(self):
+        """Show the login frame."""
+        self.signup_frame.pack_forget()
+        self.main_menu_frame.pack_forget()
+        self.encode_frame.pack_forget()
+        self.decode_frame.pack_forget()
+        self.login_frame.pack(pady=50)
+
+    def show_signup(self):
+        """Show the signup frame."""
+        self.login_frame.pack_forget()
+        self.main_menu_frame.pack_forget()
+        self.encode_frame.pack_forget()
+        self.decode_frame.pack_forget()
+        self.signup_frame.pack(pady=50)
+
+    def show_main_menu(self):
+        """Show the main menu frame."""
+        self.login_frame.pack_forget()
+        self.signup_frame.pack_forget()
+        self.encode_frame.pack_forget()
+        self.decode_frame.pack_forget()
+        self.main_menu_frame.pack(pady=50)
+
+    def show_encode(self):
+        """Show the encode frame."""
+        self.main_menu_frame.pack_forget()
+        self.decode_frame.pack_forget()
+        self.encode_frame.pack(pady=50)
+
+    def show_decode(self):
+        """Show the decode frame."""
+        self.main_menu_frame.pack_forget()
+        self.encode_frame.pack_forget()
+        self.decode_frame.pack(pady=50)
+
+    def login(self):
+        """Handle user login."""
+        username = self.login_username.get().strip()
+        password = self.login_password.get().strip()
+
+        if username in self.registered_users and self.registered_users[username] == password:
+            messagebox.showinfo("Login Successful", "Welcome!")
+            self.show_main_menu()
         else:
-            algo = PhaseEncodingAudioStego()
-        result = algo.encodeAudio(self.fileSelected, self.entryText.get())
+            messagebox.showerror("Login Failed", "Invalid credentials!")
 
-        self.enocdedLocation.set(result)
+    def signup(self):
+        """Handle user signup."""
+        username = self.signup_username.get().strip()
+        password = self.signup_password.get().strip()
+        confirm_password = self.signup_confirm_password.get().strip()
 
-    def decode(self):
-        # select algo to decode
-        if self.decodeOptionsVar.get() == "Least Significant Bit":
-            algo = LSBAudioStego()
+        if not username or not password or not confirm_password:
+            messagebox.showerror("Error", "Please fill in all fields!")
+        elif password != confirm_password:
+            messagebox.showerror("Error", "Passwords do not match!")
+        elif username in self.registered_users:
+            messagebox.showerror("Error", "Username already exists!")
         else:
-            algo = PhaseEncodingAudioStego()
+            self.registered_users[username] = password
+            self.save_users()
+            messagebox.showinfo("Success", "Account created successfully!")
+            self.show_login()
 
-        result = algo.decodeAudio(self.fileSelcetedForDecode)
-        self.decodedString.set(result)
+    def toggle_theme(self):
+        """Toggle between dark and light themes."""
+        if self.theme_var.get():
+            sv_ttk.set_theme("dark")
+        else:
+            sv_ttk.set_theme("light")
 
+    def select_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("WAV Files", "*.wav")])
+        if file_path:
+            self.selected_file.set(file_path)
+    
+    def select_decode_file(self):
+        file_path = filedialog.askopenfilename(filetypes=[("WAV Files", "*.wav")])
+        if file_path:
+            self.selected_decode_file.set(file_path)
+    
+    def encode_audio(self):
+        if not self.selected_file.get() or not self.message_entry.get():
+            messagebox.showerror("Error", "Please select a file and enter a message.")
+            return
+        
+        algo = LSBAudioStego() if self.encoding_algorithm.get() == "Least Significant Bit" else PhaseEncodingAudioStego()
+        result = algo.encodeAudio(self.selected_file.get(), self.message_entry.get())
+        messagebox.showinfo("Success", f"Encoded file saved at: {result}")
+    
+    def decode_audio(self):
+        if not self.selected_decode_file.get():
+            messagebox.showerror("Error", "Please select a file.")
+            return
+        
+        algo = LSBAudioStego() if self.decoding_algorithm.get() == "Least Significant Bit" else PhaseEncodingAudioStego()
+        result = algo.decodeAudio(self.selected_decode_file.get())
+        self.decoded_message.set(f"Decoded Message: {result}")
+        messagebox.showinfo("Decoded Message", result)
 
-# resolution
-root.geometry("1000x700")
-
-# creation of an instance of window
-app = Window(root)
-
-# mainloop
-root.mainloop()
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = AudioSteganographyApp(root)
+    root.mainloop()
